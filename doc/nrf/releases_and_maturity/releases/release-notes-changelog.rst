@@ -161,7 +161,9 @@ See `Samples`_ for lists of changes for the protocol-related samples.
 Bluetooth® LE
 -------------
 
-|no_changes_yet_note|
+* Updated:
+
+  * Made support for Direct Test Mode HCI commands optional through KConfig option :kconfig:option:`CONFIG_BT_CTLR_DTM_HCI`.
 
 Bluetooth Mesh
 --------------
