@@ -230,19 +230,148 @@ static uint16_t on_test_end_cmd(enum dtm_tw_ctrl_code control, uint8_t parameter
   return DTM_TW_EVENT_TEST_STATUS_ERROR;
 }
 
+static int get_hci_param_channel(uint8_t channel_tw, uint8_t *channel_hci)
+{
+    if (channel_tw < DTM_TW_CHANNEL_MIN_RANGE || channel_tw > DTM_TW_CHANNEL_MAX_RANGE) {
+        return -EINVAL;
+    }
+
+    *channel_hci = channel_tw;
+    return 0;
+}
+
+static int get_hci_param_pkt_payload(enum dtm_tw_pkt_type pkt_type_tw, uint8_t *pkt_payload_hci)
+{
+  switch (pkt_type_tw) {
+  case DTM_TW_PKT_PRBS9:
+    *pkt_payload_hci = BT_HCI_TEST_PKT_PAYLOAD_PRBS9;
+    break;
+
+  case DTM_TW_PKT_0X0F:
+    *pkt_payload_hci = BT_HCI_TEST_PKT_PAYLOAD_11110000;
+    break;
+
+  case DTM_TW_PKT_0X55:
+    *pkt_payload_hci = BT_HCI_TEST_PKT_PAYLOAD_10101010;
+    break;
+
+  case DTM_TW_PKT_0XFF_OR_VS:
+    if (dtm_hci_parameters.tx_phy == BT_HCI_LE_TX_PHY_CODED_S8 ||
+        dtm_hci_parameters.tx_phy == BT_HCI_LE_TX_PHY_CODED_S2)
+    {
+      *pkt_payload_hci = BT_HCI_TEST_PKT_PAYLOAD_11111111;
+    }
+    else
+    {
+      /* For non-Coded PHY, the 0xFF packet type is vendor specific.
+       * We do not support vendor specific packet types in this implementation. */
+      return -EINVAL;
+    }
+    break;
+
+  default:
+    return -EINVAL;
+  }
+
+  return 0;
+}
+
 static uint16_t on_test_rx_cmd(uint8_t channel, struct net_buf *hci_cmd)
 {
-  /* TODO: Implement test receive command handling, returning HCI_GENERATED if an HCI command is generated in hci_cmd,
-   * and otherwise returning a two-wire error event. */
-  return DTM_TW_EVENT_TEST_STATUS_ERROR;
+  uint8_t hci_param_channel;
+	if (get_hci_param_channel(channel, &hci_param_channel)) {
+    return DTM_TW_EVENT_TEST_STATUS_ERROR;
+  }
+
+  struct bt_hci_cmd_hdr *cmd_hdr = net_buf_add(hci_cmd, BT_HCI_CMD_HDR_SIZE);
+#if CONFIG_DTM_TWOWIRE_TO_HCI_RECEIVER_TEST_VERSION == 3
+  cmd_hdr->opcode = BT_HCI_OP_LE_RX_TEST_V3;
+  /* TODO: DRGN-27910 add CTE and antenna switching support */
+  cmd_hdr->param_len = sizeof(struct bt_hci_cp_le_rx_test_v3);
+  struct bt_hci_cp_le_rx_test_v3 *cp = net_buf_add(hci_cmd, sizeof(struct bt_hci_cp_le_rx_test_v3));
+#elif CONFIG_DTM_TWOWIRE_TO_HCI_RECEIVER_TEST_VERSION == 2
+  cmd_hdr->opcode = BT_HCI_OP_LE_ENH_RX_TEST;
+  cmd_hdr->param_len = sizeof(struct bt_hci_cp_le_enh_rx_test);
+  struct bt_hci_cp_le_enh_rx_test *cp = net_buf_add(hci_cmd, sizeof(struct bt_hci_cp_le_enh_rx_test));
+#elif CONFIG_DTM_TWOWIRE_TO_HCI_RECEIVER_TEST_VERSION == 1
+  cmd_hdr->opcode = BT_HCI_OP_LE_RX_TEST;
+  cmd_hdr->param_len = sizeof(struct bt_hci_cp_le_rx_test);
+  struct bt_hci_cp_le_rx_test *cp = net_buf_add(hci_cmd, sizeof(struct bt_hci_cp_le_rx_test));
+#else
+  /* This should not happen, as all versions allowed by the KConfig option's range should be handled */
+  #error "Unsupported HCI_LE_Receiver_Test version selected"
+#endif
+#if CONFIG_DTM_TWOWIRE_TO_HCI_RECEIVER_TEST_VERSION >= 1
+  cp->rx_ch = hci_param_channel;
+#endif
+#if CONFIG_DTM_TWOWIRE_TO_HCI_RECEIVER_TEST_VERSION >= 2
+  cp->phy = dtm_hci_parameters.rx_phy;
+  cp->mod_index = dtm_hci_parameters.modulation_index;
+#endif
+#if CONFIG_DTM_TWOWIRE_TO_HCI_RECEIVER_TEST_VERSION >= 3
+  /* TODO: DRGN-27910 add CTE and antenna switching support */
+  cp->expected_cte_len = 0;
+  cp->expected_cte_type = 0;
+  cp->switch_pattern_len = 0;
+#endif
+
+	return HCI_GENERATED;
 }
 
 static uint16_t on_test_tx_cmd(uint8_t channel, uint8_t length, enum dtm_tw_pkt_type type,
                                struct net_buf *hci_cmd)
 {
-  /* TODO: Implement test transmit command handling, returning HCI_GENERATED if an HCI command is generated in hci_cmd,
-   * and otherwise returning a two-wire error event. */
-  return DTM_TW_EVENT_TEST_STATUS_ERROR;
+  uint8_t hci_param_channel, hci_param_pkt_payload;
+  if (get_hci_param_channel(channel, &hci_param_channel) || get_hci_param_pkt_payload(type, &hci_param_pkt_payload)) {
+		return DTM_TW_EVENT_TEST_STATUS_ERROR;
+	}
+
+	uint8_t hci_param_length = (length & ~DTM_TW_UPPER_BITS_MASK) | dtm_hci_parameters.test_data_length;
+
+  struct bt_hci_cmd_hdr *cmd_hdr = net_buf_add(hci_cmd, BT_HCI_CMD_HDR_SIZE);
+#if CONFIG_DTM_TWOWIRE_TO_HCI_TRANSMITTER_TEST_VERSION == 4
+  cmd_hdr->opcode = BT_HCI_OP_LE_TX_TEST_V4;
+  /* TODO: DRGN-27910 add CTE and antenna switching support */
+  cmd_hdr->param_len = sizeof(struct bt_hci_cp_le_tx_test_v4) + sizeof(struct bt_hci_cp_le_tx_test_v4_tx_power);
+  struct bt_hci_cp_le_tx_test_v4 *cp = net_buf_add(hci_cmd, sizeof(struct bt_hci_cp_le_tx_test_v4));
+#elif CONFIG_DTM_TWOWIRE_TO_HCI_TRANSMITTER_TEST_VERSION == 3
+  cmd_hdr->opcode = BT_HCI_OP_LE_TX_TEST_V3;
+  /* TODO: DRGN-27910 add CTE and antenna switching support */
+  cmd_hdr->param_len = sizeof(struct bt_hci_cp_le_tx_test_v3);
+  struct bt_hci_cp_le_tx_test_v3 *cp = net_buf_add(hci_cmd, sizeof(struct bt_hci_cp_le_tx_test_v3));
+#elif CONFIG_DTM_TWOWIRE_TO_HCI_TRANSMITTER_TEST_VERSION == 2
+  cmd_hdr->opcode = BT_HCI_OP_LE_ENH_TX_TEST;
+  cmd_hdr->param_len = sizeof(struct bt_hci_cp_le_enh_tx_test);
+  struct bt_hci_cp_le_enh_tx_test *cp = net_buf_add(hci_cmd, sizeof(struct bt_hci_cp_le_enh_tx_test));
+#elif CONFIG_DTM_TWOWIRE_TO_HCI_TRANSMITTER_TEST_VERSION == 1
+  cmd_hdr->opcode = BT_HCI_OP_LE_TX_TEST;
+  cmd_hdr->param_len = sizeof(struct bt_hci_cp_le_tx_test);
+  struct bt_hci_cp_le_tx_test *cp = net_buf_add(hci_cmd, sizeof(struct bt_hci_cp_le_tx_test));
+#else
+  /* This should not happen, as all versions allowed by the KConfig option's range should be handled */
+  #error "Unsupported HCI_LE_Transmitter_Test version selected"
+#endif
+#if CONFIG_DTM_TWOWIRE_TO_HCI_TRANSMITTER_TEST_VERSION >= 1
+  cp->tx_ch = hci_param_channel;
+  cp->test_data_len = hci_param_length;
+  cp->pkt_payload = hci_param_pkt_payload;
+#endif
+#if CONFIG_DTM_TWOWIRE_TO_HCI_TRANSMITTER_TEST_VERSION >= 2
+  cp->phy = dtm_hci_parameters.tx_phy;
+#endif
+#if CONFIG_DTM_TWOWIRE_TO_HCI_TRANSMITTER_TEST_VERSION >= 3
+  /* TODO: DRGN-27910 add CTE and antenna switching support */
+  cp->cte_len = 0;
+  cp->cte_type = 0;
+  cp->switch_pattern_len = 0;
+#endif
+#if CONFIG_DTM_TWOWIRE_TO_HCI_TRANSMITTER_TEST_VERSION >= 4
+  struct bt_hci_cp_le_tx_test_v4_tx_power *cp_power = net_buf_add(hci_cmd,
+                                                                  sizeof(struct bt_hci_cp_le_tx_test_v4_tx_power));
+  cp_power->tx_power = dtm_hci_parameters.transmit_power;
+#endif
+
+	return HCI_GENERATED;
 }
 
 static uint16_t on_cc_supported_features(const struct bt_hci_rp_le_read_all_local_supported_features *features_rp)
@@ -334,6 +463,15 @@ static uint16_t on_cc_read_tx_power(const struct bt_hci_rp_le_read_tx_power *tx_
   event |= ((dtm_hci_parameters.transmit_power << DTM_TW_TRANSMIT_POWER_RESPONSE_LVL_POS) &
             DTM_TW_TRANSMIT_POWER_RESPONSE_LVL_MASK);
   return event;
+}
+
+static uint16_t on_cc_test_start(const struct bt_hci_evt_cc_status *status_rp)
+{
+  if (status_rp->status != BT_HCI_ERR_SUCCESS) {
+    LOG_ERR("Test start command failed with status 0x%02X", status_rp->status);
+    return DTM_TW_EVENT_TEST_STATUS_ERROR;
+  }
+  return DTM_TW_EVENT_TEST_STATUS_SUCCESS;
 }
 
 static int dtm_tw_to_hci_init(void)
@@ -449,6 +587,17 @@ dtm_tw_to_hci_status_t dtm_tw_to_hci_process_hci_event(const uint16_t tw_cmd, co
   case BT_HCI_OP_LE_READ_TX_POWER:
     const struct bt_hci_rp_le_read_tx_power *tx_power_rp = cc_event_return_params;
     *tw_event = on_cc_read_tx_power(tx_power_rp);
+    return DTM_TW_TO_HCI_STATUS_TW_EVENT;
+
+  case BT_HCI_OP_LE_RX_TEST:
+  case BT_HCI_OP_LE_ENH_RX_TEST:
+  case BT_HCI_OP_LE_RX_TEST_V3:
+  case BT_HCI_OP_LE_TX_TEST:
+  case BT_HCI_OP_LE_ENH_TX_TEST:
+  case BT_HCI_OP_LE_TX_TEST_V3:
+  case BT_HCI_OP_LE_TX_TEST_V4:
+    const struct bt_hci_evt_cc_status *status_rp = cc_event_return_params;
+    *tw_event = on_cc_test_start(status_rp);
     return DTM_TW_TO_HCI_STATUS_TW_EVENT;
 
   /* TODO: Handle specific DTM-related HCI command complete events, put the resulting two-wire event in tw_event,
