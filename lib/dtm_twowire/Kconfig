@@ -1,0 +1,17 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig DTM_TWOWIRE_TO_HCI
+  bool "DTM Two-Wire to HCI conversion library"
+
+if DTM_TWOWIRE_TO_HCI
+
+module=DTM_TWOWIRE_TO_HCI
+module-dep=LOG
+module-str= DTM Two-Wire to HCI conversion library
+source "$(ZEPHYR_BASE)/subsys/logging/Kconfig.template.log_config"
+
+endif # DTM_TWOWIRE_TO_HCI
