@@ -225,9 +225,19 @@ static uint16_t on_test_setup_cmd(enum dtm_tw_ctrl_code control, uint8_t paramet
 
 static uint16_t on_test_end_cmd(enum dtm_tw_ctrl_code control, uint8_t parameter, struct net_buf *hci_cmd)
 {
-  /* TODO: Implement test end command handling, returning HCI_GENERATED if an HCI command is generated in hci_cmd,
-   * and otherwise returning a two-wire error event. */
-  return DTM_TW_EVENT_TEST_STATUS_ERROR;
+  if (control) {
+    return DTM_TW_EVENT_TEST_STATUS_ERROR;
+  }
+
+  if (parameter > DTM_TW_TEST_END_MAX_RANGE) {
+    return DTM_TW_EVENT_TEST_STATUS_ERROR;
+  }
+
+  struct bt_hci_cmd_hdr *cmd_hdr = net_buf_add(hci_cmd, BT_HCI_CMD_HDR_SIZE);
+  cmd_hdr->opcode = BT_HCI_OP_LE_TEST_END;
+  cmd_hdr->param_len = 0;
+
+  return HCI_GENERATED;
 }
 
 static int get_hci_param_channel(uint8_t channel_tw, uint8_t *channel_hci)
@@ -474,6 +484,16 @@ static uint16_t on_cc_test_start(const struct bt_hci_evt_cc_status *status_rp)
   return DTM_TW_EVENT_TEST_STATUS_SUCCESS;
 }
 
+static uint16_t on_cc_test_end(const struct bt_hci_rp_le_test_end *test_end_rp)
+{
+  if (test_end_rp->status != BT_HCI_ERR_SUCCESS) {
+    LOG_ERR("LE Test End command failed with status 0x%02X", test_end_rp->status);
+    return DTM_TW_EVENT_TEST_STATUS_ERROR;
+  }
+
+  return DTM_TW_EVENT_PACKET_REPORTING | (test_end_rp->rx_pkt_count & DTM_TW_PACKET_COUNT_MASK);
+}
+
 static int dtm_tw_to_hci_init(void)
 {
   reset_dtm(DTM_TW_RESET_MIN_RANGE);
@@ -600,8 +620,11 @@ dtm_tw_to_hci_status_t dtm_tw_to_hci_process_hci_event(const uint16_t tw_cmd, co
     *tw_event = on_cc_test_start(status_rp);
     return DTM_TW_TO_HCI_STATUS_TW_EVENT;
 
-  /* TODO: Handle specific DTM-related HCI command complete events, put the resulting two-wire event in tw_event,
-   * and return DTM_TW_TO_HCI_STATUS_TW_EVENT. */
+  case BT_HCI_OP_LE_TEST_END:
+    const struct bt_hci_rp_le_test_end *test_end_rp = cc_event_return_params;
+    *tw_event = on_cc_test_end(test_end_rp);
+    return DTM_TW_TO_HCI_STATUS_TW_EVENT;
+
   default:
     LOG_WRN("Unhandled HCI command complete event for opcode 0x%04X", cc_event->opcode);
     return DTM_TW_TO_HCI_STATUS_UNHANDLED;
