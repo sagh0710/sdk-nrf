@@ -87,7 +87,7 @@ enum dtm_tw_cmd_code {
 	DTM_TW_CMD_TRANSMITTER_TEST = 0x2,
 
 	/* Test End Command: End test and send packet report. */
-	DTM_TW_CMD_TEST_END  = 0x3,
+	DTM_TW_CMD_TEST_END = 0x3,
 };
 
 /**
