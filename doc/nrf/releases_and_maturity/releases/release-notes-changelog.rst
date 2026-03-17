@@ -186,6 +186,7 @@ Bluetooth® LE
 -------------
 
 * Updated the Direct Test Mode HCI commands by making them optional through the :kconfig:option:`CONFIG_BT_CTLR_DTM_HCI` Kconfig option.
+* Added the :ref:`dtm_twowire_to_hci_readme` library that converts DTM 2-wire UART commands into appropriate 2-wire UART events or HCI commands, and subsequent HCI events into 2-wire UART events.
 
 Bluetooth Mesh
 --------------

@@ -15,7 +15,7 @@
 
 LOG_MODULE_REGISTER(dtm_tw_to_hci, CONFIG_DTM_TWOWIRE_TO_HCI_LOG_LEVEL);
 
-/* Return value for internal functions that return 2-Wire events to signal
+/* Return value for internal functions that return 2-wire events to signal
  * that an HCI command was generated instead.
  */
 #define HCI_GENERATED 0xFFFF
@@ -24,7 +24,7 @@ LOG_MODULE_REGISTER(dtm_tw_to_hci, CONFIG_DTM_TWOWIRE_TO_HCI_LOG_LEVEL);
 #define HCI_H4_PKT_INDICATOR_OFFSET 0
 #define HCI_H4_PKT_OFFSET 1
 
-/* Helper macros to parse DTM 2-Wire commands */
+/* Helper macros to parse DTM 2-wire commands */
 #define TW_CMD_CODE(tw_cmd) ((tw_cmd >> 14) & 0x03)
 #define TW_CMD_CHANNEL(tw_cmd) ((tw_cmd >> 8) & 0x3F)
 #define TW_CMD_LENGTH(tw_cmd) ((tw_cmd >> 2) & 0x3F)
@@ -50,7 +50,7 @@ LOG_MODULE_REGISTER(dtm_tw_to_hci, CONFIG_DTM_TWOWIRE_TO_HCI_LOG_LEVEL);
 #define FEATURE_AOD_1US_RX(features) 0
 #define FEATURE_AOA_1US_RX(features) 0
 
-/* DTM parameters buffered from 2-Wire Test Setup commands to be used in HCI commands */
+/* DTM parameters buffered from 2-wire Test Setup commands to be used in HCI commands */
 struct {
 	uint8_t test_data_length;   /**< Length of the payload for Transmitter Test HCI command */
 	uint8_t tx_phy;             /**< PHY for Transmitter Test HCI command */
@@ -448,7 +448,7 @@ static uint16_t on_cc_read_max(const struct bt_hci_rp_le_read_max_data_len *max_
 		return DTM_TW_EVENT_TEST_STATUS_ERROR;
 	}
 	/* The max data length event encodes both RX and TX octets and time, so we need to check
-	 * which parameter the 2-Wire command was querying for and return the appropriate
+	 * which parameter the 2-wire command was querying for and return the appropriate
 	 * value.
 	 */
 	uint16_t ret;
@@ -460,7 +460,7 @@ static uint16_t on_cc_read_max(const struct bt_hci_rp_le_read_max_data_len *max_
 	} else if (parameter >= DTM_TW_SUPPORTED_TX_TIME_MIN_RANGE &&
 		   parameter <= DTM_TW_SUPPORTED_TX_TIME_MAX_RANGE) {
 		/* The HCI command returns the max TX time in microseconds,
-		 * while the 2-Wire event returns the max TX time in microseconds divided by 2.
+		 * while the 2-wire event returns the max TX time in microseconds divided by 2.
 		 */
 		ret = max_data_len_rp->max_tx_time >> 1;
 	} else if (parameter >= DTM_TW_SUPPORTED_RX_OCTETS_MIN_RANGE &&
@@ -469,7 +469,7 @@ static uint16_t on_cc_read_max(const struct bt_hci_rp_le_read_max_data_len *max_
 	} else if (parameter >= DTM_TW_SUPPORTED_RX_TIME_MIN_RANGE &&
 		   parameter <= DTM_TW_SUPPORTED_RX_TIME_MAX_RANGE) {
 		/* The HCI command returns the max RX time in microseconds,
-		 * while the 2-Wire event returns the max RX time in microseconds divided by 2.
+		 * while the 2-wire event returns the max RX time in microseconds divided by 2.
 		 */
 		ret = max_data_len_rp->max_rx_time >> 1;
 	} else {

@@ -7,6 +7,13 @@
 #ifndef DTM_TWOWIRE_TYPES_H_
 #define DTM_TWOWIRE_TYPES_H_
 
+/**
+ * @file
+ * @defgroup dtm_tw_types Bluetooth DTM 2-wire UART types
+ * @{
+ * @brief Macros and enums for different values and positions of DTM 2-wire UART packet fields.
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -104,9 +111,7 @@ enum dtm_tw_ctrl_code {
 	/* Select the PHY to be used for packets. */
 	DTM_TW_TEST_SETUP_SET_PHY = 0x02,
 
-	/* Select standard or stable modulation index. Stable modulation index
-	 * is not supported.
-	 */
+	/* Select standard or stable modulation index. */
 	DTM_TW_TEST_SETUP_SELECT_MODULATION = 0x03,
 
 	/* Read the supported test case features. */
@@ -293,7 +298,7 @@ enum dtm_tw_antenna_number {
 
 /**
  * @enum dtm_tw_antenna_pattern
- * @brief Constant Tone Extension: Antenna switch pattern 1, 2, 3 ...N.
+ * @brief DTM Test Setup antenna switching pattern.
  */
 enum dtm_tw_antenna_pattern {
 	/* Constant Tone Extension: Antenna switch pattern 1, 2, 3 ...N. */
@@ -394,5 +399,9 @@ enum dtm_tw_event {
 #ifdef __cplusplus
 }
 #endif
+
+/**
+ * @}
+ */
 
 #endif /* DTM_TWOWIRE_TYPES_H_ */
