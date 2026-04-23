@@ -68,6 +68,7 @@ static uint16_t reset_dtm(uint8_t parameter)
 	/* Reset DTM parameters to default values as specified in Core v6.2, Vol 6, Part F, 3.3.2 */
 	memset(&dtm_hci_parameters, 0, sizeof(dtm_hci_parameters));
 	dtm_hci_parameters.tx_phy = BT_HCI_LE_TX_PHY_1M;
+	dtm_hci_parameters.rx_phy = BT_HCI_LE_RX_PHY_1M;
 	dtm_hci_parameters.modulation_index = BT_HCI_LE_MOD_INDEX_STANDARD;
 	return DTM_TW_EVENT_TEST_STATUS_SUCCESS;
 }
