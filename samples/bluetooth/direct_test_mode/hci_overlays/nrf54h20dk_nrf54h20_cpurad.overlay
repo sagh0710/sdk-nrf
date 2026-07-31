@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/delete-node/ &cpuapp_slot1_partition;
+/delete-node/ &cpurad_slot1_partition;
+
+/* Increase cpurad_slot0 to 350 kB; shrink cpuppr to fit before cpuflpr */
+&cpurad_slot0_partition {
+  reg = <0x92000 DT_SIZE_K(350)>; /* ends at 0xE9800 */
+};
+
+&cpuppr_code_partition {
+  reg = <0xE9800 0xA800>; /* 42 KB, ends at 0xF4000 */
+};
+
+
+&gpio0 {
+  status = "okay";
+};
+
+&gpiote130 {
+  status = "okay";
+};
+
+/ {
+	chosen {
+		zephyr,bt-c2h-uart = &uart135;
+	};
+
+  cs_antenna_switch: cs-antenna-config {
+    status = "okay";
+    compatible = "nordic,bt-cs-antenna-switch";
+    ant-gpios = <&gpio0 0 (GPIO_ACTIVE_HIGH)>,
+                <&gpio0 1 (GPIO_ACTIVE_HIGH)>,
+                <&gpio0 2 (GPIO_ACTIVE_HIGH)>,
+                <&gpio0 3 (GPIO_ACTIVE_HIGH)>;
+    multiplexing-mode = <0>;
+  };
+};
+
+&uart135 {
+	current-speed = <1000000>;
+	status = "okay";
+	hw-flow-control;
+};

@@ -1,0 +1,47 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/ {
+	cs_antenna_switch: cs-antenna-config {
+		status = "okay";
+		compatible = "nordic,bt-cs-antenna-switch";
+		ant-gpios = <&gpio1 11 (GPIO_ACTIVE_HIGH)>,
+			<&gpio1 12 (GPIO_ACTIVE_HIGH)>,
+			<&gpio1 13 (GPIO_ACTIVE_HIGH)>,
+			<&gpio1 14 (GPIO_ACTIVE_HIGH)>;
+		multiplexing-mode = <0>;
+	};
+};
+
+// NCSDK-36190: remove the workaround when hci_uart_async sample is fixed
+&pinctrl {
+    uart20_sleep_alt: uart20_sleep_alt {
+      group1 {
+        psels = <NRF_PSEL(UART_TX, 1, 16)>,
+          <NRF_PSEL(UART_RX, 1, 17)>,
+          <NRF_PSEL(UART_CTS, 1, 19)>;
+        low-power-enable;
+      };
+      group2 {
+        psels = <NRF_PSEL(UART_RTS, 1, 18)>;
+        low-power-enable;
+        bias-pull-up;
+      };
+    };
+};
+
+
+&uart20 {
+	compatible = "nordic,nrf-uarte";
+    pinctrl-1 = <&uart20_sleep_alt>;
+	current-speed = <1000000>;
+	status = "okay";
+	hw-flow-control;
+};
+
+/** We don't intend to use external flash in our tests. By disabling *spi*: &mx25r64 we
+ * ensure that drivers interfacing with it are disabled. This applies to the SPI
+ * driver when FLASH is selected.
+ */
+ &mx25r64 {
+  status = "disabled";
+};

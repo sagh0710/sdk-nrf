@@ -6,6 +6,21 @@
 
 mainmenu "Nordic DTM sample"
 
+choice DTM_SAMPLE_INTERFACE
+        prompt "DTM interface"
+        default DTM_SAMPLE_INTERFACE_TWOWIRE
+
+config DTM_SAMPLE_INTERFACE_TWOWIRE
+        bool "2-wire"
+        select BT_CTLR_EXTENDED_FEAT_SET
+        select DTM_TWOWIRE_TO_HCI
+
+config DTM_SAMPLE_INTERFACE_HCI
+        bool "HCI"
+        select UART_ASYNC_API
+
+endchoice
+
 module = DTM_TW_TRANSPORT
 module-str = "DTM 2-wire transport"
 source "subsys/logging/Kconfig.template.log_config"

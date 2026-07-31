@@ -1,0 +1,20 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/ {
+  cs_antenna_switch: cs-antenna-config {
+    status = "okay";
+    compatible = "nordic,bt-cs-antenna-switch";
+    ant-gpios = <&gpio1 4 (GPIO_ACTIVE_HIGH)>,
+                <&gpio1 5 (GPIO_ACTIVE_HIGH)>,
+                <&gpio1 6 (GPIO_ACTIVE_HIGH)>,
+                <&gpio1 8 (GPIO_ACTIVE_HIGH)>;
+    multiplexing-mode = <0>;
+  };
+};
+
+&uart20 {
+	compatible = "nordic,nrf-uarte";
+	current-speed = <1000000>;
+	status = "okay";
+	hw-flow-control;
+};
